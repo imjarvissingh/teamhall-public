@@ -1,0 +1,54 @@
+name: Public harness validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-harness:
+    name: PUBLIC HARNESS VALIDATION — NOT FULL PRIVATE TEAMHALL CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Announce scope and identify runner
+        run: |
+          echo "::notice title=Validation scope::PUBLIC HARNESS VALIDATION — NOT FULL PRIVATE TEAMHALL CI"
+          printf '%s\n' 'PUBLIC HARNESS VALIDATION — NOT FULL PRIVATE TEAMHALL CI'
+          printf 'Runner OS: %s\n' "$(. /etc/os-release && printf '%s %s' "$NAME" "$VERSION_ID")"
+          printf 'Runner architecture: %s\n' "$(uname -m)"
+
+      - name: Check out this public harness repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # actions/checkout v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # actions/setup-node v6
+        with:
+          node-version: '24'
+          check-latest: false
+
+      - name: Set up Rust stable
+        run: rustup toolchain install stable --profile minimal --no-self-update
+
+      - name: Report toolchain versions
+        run: |
+          rustc +stable --version
+          cargo +stable --version
+          node --version
+          npm --version
+          corepack prepare pnpm@12.14.0 --activate
+          pnpm --version
+
+      - name: Test synthetic Rust fixture
+        run: cargo +stable test --locked --manifest-path public-fixtures/rust/Cargo.toml
+
+      - name: Test synthetic Node fixture
+        run: node --test public-fixtures/node/test.mjs
